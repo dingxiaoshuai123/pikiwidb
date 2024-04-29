@@ -8,24 +8,24 @@
 //
 //  PikiwiDB.cc
 
+#include "pikiwidb.h"
+
 #include <sys/fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <iostream>
 #include <thread>
 
-#include "log.h"
+#include "praft/praft.h"
+#include "pstd/log.h"
+#include "pstd/pstd_util.h"
 
 #include "client.h"
-#include "store.h"
-
 #include "config.h"
-#include "slow_log.h"
-
 #include "helper.h"
-#include "pikiwidb.h"
 #include "pikiwidb_logo.h"
-#include "pstd_util.h"
+#include "slow_log.h"
+#include "store.h"
 
 std::unique_ptr<PikiwiDB> g_pikiwidb;
 using namespace pikiwidb;
@@ -154,7 +154,7 @@ bool PikiwiDB::Init() {
     return false;
   }
 
-  PSTORE.Init(g_config.databases);
+  PSTORE.Init();
 
   PSlowLog::Instance().SetThreshold(g_config.slow_log_time.load());
   PSlowLog::Instance().SetLogLimit(static_cast<std::size_t>(g_config.slow_log_max_len.load()));
@@ -194,6 +194,9 @@ void PikiwiDB::Run() {
 }
 
 void PikiwiDB::Stop() {
+  pikiwidb::PRAFT.ShutDown();
+  pikiwidb::PRAFT.Join();
+  pikiwidb::PRAFT.Clear();
   slave_threads_.Exit();
   worker_threads_.Exit();
   cmd_threads_.Stop();
@@ -231,7 +234,6 @@ static void closeStd() {
 
 int main(int ac, char* av[]) {
   g_pikiwidb = std::make_unique<PikiwiDB>();
-
   if (!g_pikiwidb->ParseArgs(ac - 1, av + 1)) {
     Usage();
     return -1;

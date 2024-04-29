@@ -17,8 +17,13 @@ FetchContent_MakeAvailableWithArgs(gflags
   BUILD_gflags_LIB=ON
   BUILD_gflags_nothreads_LIB=OFF
   BUILD_TESTING=OFF
+  CMAKE_BUILD_TYPE=Release
 )
 
-find_package(Threads REQUIRED)
+FIND_PACKAGE(Threads REQUIRED)
 
-target_link_libraries(gflags_static Threads::Threads)
+TARGET_LINK_LIBRARIES(gflags_static Threads::Threads)
+
+SET(GFLAGS_INCLUDE_PATH ${CMAKE_CURRENT_BINARY_DIR}/_deps/gflags-build/include)
+SET(GFLAGS_LIBRARY ${CMAKE_CURRENT_BINARY_DIR}/_deps/gflags-build/libgflags.a)
+SET(GFLAGS_LIB ${CMAKE_CURRENT_BINARY_DIR}/_deps/gflags-build/libgflags.a)

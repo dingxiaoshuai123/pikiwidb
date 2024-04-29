@@ -14,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <map>
 #include <vector>
 
 #include "rocksdb/options.h"
@@ -27,6 +28,7 @@ namespace pikiwidb {
 using Status = rocksdb::Status;
 using CheckFunc = std::function<Status(const std::string&)>;
 class PConfig;
+
 extern PConfig g_config;
 
 class BaseValue {

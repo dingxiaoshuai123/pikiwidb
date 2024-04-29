@@ -6,8 +6,13 @@
  */
 
 #include "cmd_admin.h"
-#include "pikiwidb.h"
+
+#include "braft/raft.h"
+#include "rocksdb/version.h"
+
+#include "praft/praft.h"
 #include "store.h"
+#include "pikiwidb.h"
 
 namespace pikiwidb {
 
@@ -118,5 +123,96 @@ PingCmd::PingCmd(const std::string& name, int16_t arity)
 bool PingCmd::DoInitial(PClient* client) { return true; }
 
 void PingCmd::DoCmd(PClient* client) { client->SetRes(CmdRes::kPong, "PONG"); }
+
+InfoCmd::InfoCmd(const std::string& name, int16_t arity)
+    : BaseCmd(name, arity, kCmdFlagsAdmin | kCmdFlagsReadonly, kAclCategoryAdmin) {}
+
+bool InfoCmd::DoInitial(PClient* client) { return true; }
+
+// @todo The info raft command is only supported for the time being
+void InfoCmd::DoCmd(PClient* client) {
+  if (client->argv_.size() <= 1) {
+    return client->SetRes(CmdRes::kWrongNum, client->CmdName());
+  }
+
+  auto cmd = client->argv_[1];
+  if (!strcasecmp(cmd.c_str(), "RAFT")) {
+    InfoRaft(client);
+  } else if (!strcasecmp(cmd.c_str(), "data")) {
+    InfoData(client);
+  } else {
+    client->SetRes(CmdRes::kErrOther, "the cmd is not supported");
+  }
+}
+
+/*
+* INFO raft
+* Querying Node Information.
+* Reply:
+*   raft_node_id:595100767
+    raft_state:up
+    raft_role:follower
+    raft_is_voting:yes
+    raft_leader_id:1733428433
+    raft_current_term:1
+    raft_num_nodes:2
+    raft_num_voting_nodes:2
+    raft_node1:id=1733428433,state=connected,voting=yes,addr=localhost,port=5001,last_conn_secs=5,conn_errors=0,conn_oks=1
+*/
+void InfoCmd::InfoRaft(PClient* client) {
+  if (client->argv_.size() != 2) {
+    return client->SetRes(CmdRes::kWrongNum, client->CmdName());
+  }
+
+  if (!PRAFT.IsInitialized()) {
+    return client->SetRes(CmdRes::kErrOther, "Don't already cluster member");
+  }
+
+  auto node_status = PRAFT.GetNodeStatus();
+  if (node_status.state == braft::State::STATE_END) {
+    return client->SetRes(CmdRes::kErrOther, "Node is not initialized");
+  }
+
+  std::string message;
+  message += "raft_group_id:" + PRAFT.GetGroupID() + "\r\n";
+  message += "raft_node_id:" + PRAFT.GetNodeID() + "\r\n";
+  message += "raft_peer_id:" + PRAFT.GetPeerID() + "\r\n";
+  if (braft::is_active_state(node_status.state)) {
+    message += "raft_state:up\r\n";
+  } else {
+    message += "raft_state:down\r\n";
+  }
+  message += "raft_role:" + std::string(braft::state2str(node_status.state)) + "\r\n";
+  message += "raft_leader_id:" + node_status.leader_id.to_string() + "\r\n";
+  message += "raft_current_term:" + std::to_string(node_status.term) + "\r\n";
+
+  if (PRAFT.IsLeader()) {
+    std::vector<braft::PeerId> peers;
+    auto status = PRAFT.GetListPeers(&peers);
+    if (!status.ok()) {
+      return client->SetRes(CmdRes::kErrOther, status.error_str());
+    }
+
+    for (int i = 0; i < peers.size(); i++) {
+      message += "raft_node" + std::to_string(i) + ":addr=" + butil::ip2str(peers[i].addr.ip).c_str() +
+                 ",port=" + std::to_string(peers[i].addr.port) + "\r\n";
+    }
+  }
+
+  client->AppendString(message);
+}
+
+void InfoCmd::InfoData(PClient* client) {
+  if (client->argv_.size() != 2) {
+    return client->SetRes(CmdRes::kWrongNum, client->CmdName());
+  }
+
+  std::string message;
+  message += DATABASES_NUM + std::string(":") + std::to_string(pikiwidb::g_config.databases) + "\r\n";
+  message += ROCKSDB_NUM + std::string(":") + std::to_string(pikiwidb::g_config.db_instance_num) + "\r\n";
+  message += ROCKSDB_VERSION + std::string(":") + ROCKSDB_NAMESPACE::GetRocksVersionAsString() + "\r\n";
+
+  client->AppendString(message);
+}
 
 }  // namespace pikiwidb

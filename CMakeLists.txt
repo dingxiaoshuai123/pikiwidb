@@ -1,7 +1,12 @@
+# Copyright (c) 2023-present, Qihoo, Inc.  All rights reserved.
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree. An additional grant
+# of patent rights can be found in the PATENTS file in the same directory.
+
 CMAKE_MINIMUM_REQUIRED(VERSION 3.14)
 PROJECT(PikiwiDB)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -g -D'GIT_COMMIT_ID=\"${GIT_COMMIT_ID}\"'")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -D'GIT_COMMIT_ID=\"${GIT_COMMIT_ID}\"'")
 
 # Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
 IF (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
@@ -35,7 +40,7 @@ EXECUTE_PROCESS(COMMAND git rev-parse HEAD OUTPUT_VARIABLE GIT_COMMIT_ID OUTPUT_
 ADD_DEFINITIONS(-DKPIKIWIDB_GIT_COMMIT_ID="${GIT_COMMIT_ID}")
 MESSAGE(STATUS "Git commit id: ${GIT_COMMIT_ID}")
 
-############# You should enable sanitizer if you are developing pika #############
+############# You should enable sanitizer if you are developing pikiwidb #############
 # Uncomment the following two lines to enable AddressSanitizer to detect memory leaks and other memory-related bugs.
 # SET(CMAKE_BUILD_TYPE "Debug")
 # SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address  -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
@@ -78,7 +83,7 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         set(CMAKE_THREAD_LIBS_INIT "-lpthread")
     ELSEIF (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         SET(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
-        SET(CMAKE_CXX_FLAGS "-pthread -Wl,--no-as-needed -ldl -Wno-restrict")
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wl,--no-as-needed -ldl")
     ENDIF ()
     ADD_DEFINITIONS(-DOS_LINUX)
 ELSE ()
@@ -101,28 +106,80 @@ SET(INSTALL_LIBDIR ${STAGED_INSTALL_PREFIX}/lib)
 SET(INSTALL_LIBDIR_64 ${STAGED_INSTALL_PREFIX}/lib64)
 SET(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${STAGED_INSTALL_PREFIX})
 SET(BUILD_SUPPORT_DIR ${PROJECT_SOURCE_DIR}/build_support)
+# make sure we use the same compiler for all dependencies
+SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 MESSAGE(STATUS "${PROJECT_NAME} staged install: ${STAGED_INSTALL_PREFIX}")
 MESSAGE(STATUS "Current platform: ${OS_VERSION} ")
 CMAKE_HOST_SYSTEM_INFORMATION(RESULT CPU_CORE QUERY NUMBER_OF_LOGICAL_CORES)
 MESSAGE(STATUS "CPU core ${CPU_CORE}")
 
+#openssl
+FIND_PACKAGE(OpenSSL REQUIRED) 
+
+MESSAGE(STATUS "ssl:" ${OPENSSL_SSL_LIBRARY})
+MESSAGE(STATUS "crypto:" ${OPENSSL_CRYPTO_LIBRARY})
+
+ADD_LIBRARY(ssl SHARED IMPORTED GLOBAL)
+SET_PROPERTY(TARGET ssl PROPERTY IMPORTED_LOCATION ${OPENSSL_SSL_LIBRARY})
+
+ADD_LIBRARY(crypto SHARED IMPORTED GLOBAL)
+SET_PROPERTY(TARGET crypto PROPERTY IMPORTED_LOCATION ${OPENSSL_CRYPTO_LIBRARY})
+
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+SET(THIRD_PARTY_PATH ${CMAKE_CURRENT_BINARY_DIR}/third-party)
+SET(THIRD_PARTY_BUILD_TYPE ${CMAKE_BUILD_TYPE})
+SET(EXTERNAL_PROJECT_LOG_ARGS
+        LOG_DOWNLOAD 0
+        LOG_UPDATE 1
+        LOG_CONFIGURE 0
+        LOG_BUILD 0
+        LOG_TEST 1
+        LOG_INSTALL 0)
+
+IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    SET(LIB rt)
+ELSEIF(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    SET(LIB
+            pthread
+            "-framework CoreFoundation"
+            "-framework CoreGraphics"
+            "-framework CoreData"
+            "-framework CoreText"
+            "-framework Security"
+            "-framework Foundation"
+            "-Wl,-U,_MallocExtension_ReleaseFreeMemory"
+            "-Wl,-U,_ProfilerStart"
+            "-Wl,-U,_ProfilerStop"
+            "-Wl,-U,__Z13GetStackTracePPvii")
+ENDIF()
+SET(LIB ${LIB} CACHE INTERNAL "libs which should be linked for executable target")
 
 INCLUDE(FetchContent)
-#include(cmake/CmakeLists.txt)
 
-include(cmake/findTools.cmake)
-include(cmake/libevent.cmake)
-include(cmake/llhttp.cmake)
-include(cmake/fmt.cmake)
-include(cmake/spdlog.cmake)
-include(cmake/gtest.cmake)
-include(cmake/rocksdb.cmake)
+INCLUDE(gflags)
+INCLUDE(findTools)
+INCLUDE(leveldb)
+INCLUDE(libevent)
+INCLUDE(llhttp)
+INCLUDE(fmt)
+INCLUDE(spdlog)
+INCLUDE(gtest)
+INCLUDE(rocksdb)
+INCLUDE(zlib)
+INCLUDE(protobuf)
+INCLUDE(brpc)
+INCLUDE(braft)
 
-enable_testing()
+ENABLE_TESTING()
+
+SET(PROTO_OUTPUT_DIR "${CMAKE_BINARY_DIR}/generated_pb")
+FILE(MAKE_DIRECTORY "${PROTO_OUTPUT_DIR}")
 
 ADD_SUBDIRECTORY(src/pstd)
 ADD_SUBDIRECTORY(src/net)
+ADD_SUBDIRECTORY(src/praft)
 ADD_SUBDIRECTORY(src/storage)
 ADD_SUBDIRECTORY(src)
 
@@ -177,4 +234,3 @@ ADD_CUSTOM_TARGET(cpplint echo '${LINT_FILES}' | xargs -n12 -P8
   --linelength=120
   --filter=-legal/copyright,-build/header_guard,-runtime/references
 )
-
