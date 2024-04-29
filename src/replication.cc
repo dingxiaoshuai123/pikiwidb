@@ -214,24 +214,7 @@ void PReplication::Cron() {
       } break;
 
       case kPReplStateConnected:
-<<<<<<< HEAD
-        if (!g_config.master_auth.empty()) {
-          if (auto master = master_.lock()) {
-            UnboundedBuffer req;
-            req.PushData("auth ");
-            req.PushData(g_config.master_auth.ToString().data(), g_config.master_auth.ToString().size());
-            req.PushData("\r\n");
-            master->SendPacket(req);
-            INFO("send auth with password {}", g_config.master_auth.ToString());
-
-            masterInfo_.state = kPReplStateWaitAuth;
-            break;
-          }
-        }
-        // fall through to next case.
-=======
         break;
->>>>>>> import-braft
 
       case kPReplStateWaitAuth: {
         auto master = master_.lock();

@@ -146,6 +146,7 @@ class PConfig {
   AtomicString pid_file = "./pikiwidb.pid";
   AtomicString ip = "127.0.0.1";
   std::atomic_uint16_t port = 9221;
+  std::atomic_uint16_t raft_port_offset = 10;
   AtomicString db_path = "./db/";
   AtomicString log_dir = "stdout";  // the log directory, differ from redis
   AtomicString log_level = "warning";
@@ -169,6 +170,9 @@ class PConfig {
   std::atomic_bool rocksdb_enable_pipelined_write = false;
   std::atomic_int rocksdb_level0_slowdown_writes_trigger = 20;
   std::atomic_int rocksdb_level0_stop_writes_trigger = 36;
+  std::atomic_uint64_t rocksdb_ttl_second = 604800; // default 86400 * 7
+  std::atomic_uint64_t rocksdb_periodic_second = 259200; // default 86400 * 3
+  std::atomic_bool use_raft = true;
 
   rocksdb::Options GetRocksDBOptions();
 

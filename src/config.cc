@@ -105,6 +105,7 @@ PConfig::PConfig() {
   AddBool("daemonize", &CheckYesNo, false, &daemonize);
   AddString("ip", false, {&ip});
   AddNumberWihLimit<uint16_t>("port", false, &port, PORT_LIMIT_MIN, PORT_LIMIT_MAX);
+  AddNumber("raft-port-offset", true, &raft_port_offset);
   AddNumber("timeout", true, &timeout);
   AddString("db-path", false, {&db_path});
   AddStrinWithFunc("loglevel", &CheckLogLevel, false, {&log_level});

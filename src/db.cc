@@ -18,14 +18,14 @@ namespace pikiwidb {
 DB::DB(int db_index, const std::string& db_path, int rocksdb_inst_num)
     : db_index_(db_index), db_path_(db_path + std::to_string(db_index_) + '/'), rocksdb_inst_num_(rocksdb_inst_num) {
   storage::StorageOptions storage_options;
-  storage_options.options.create_if_missing = true;
+  storage_options.options = g_config.GetRocksDBOptions();
   storage_options.db_instance_num = rocksdb_inst_num_;
   storage_options.db_id = db_index_;
 
   // options for CF
-  storage_options.options.ttl = g_config.rocksdb_ttl_second;
-  storage_options.options.periodic_compaction_seconds = g_config.rocksdb_periodic_second;
-  if (g_config.use_raft) {
+  storage_options.options.ttl = g_config.rocksdb_ttl_second.load(std::memory_order_relaxed);
+  storage_options.options.periodic_compaction_seconds = g_config.rocksdb_periodic_second.load(std::memory_order_relaxed);
+  if (g_config.use_raft.load(std::memory_order_relaxed)) {
     storage_options.append_log_function = [&r = PRAFT](const Binlog& log, std::promise<rocksdb::Status>&& promise) {
       r.AppendLog(log, std::move(promise));
     };
@@ -111,9 +111,9 @@ void DB::LoadDBFromCheckpoint(const std::string& path, bool sync) {
   storage_options.db_id = db_index_;
 
   // options for CF
-  storage_options.options.ttl = g_config.rocksdb_ttl_second;
-  storage_options.options.periodic_compaction_seconds = g_config.rocksdb_periodic_second;
-  if (g_config.use_raft) {
+  storage_options.options.ttl = g_config.rocksdb_ttl_second.load(std::memory_order_relaxed);
+  storage_options.options.periodic_compaction_seconds = g_config.rocksdb_periodic_second.load(std::memory_order_relaxed);
+  if (g_config.use_raft.load(std::memory_order_relaxed)) {
     storage_options.append_log_function = [&r = PRAFT](const Binlog& log, std::promise<rocksdb::Status>&& promise) {
       r.AppendLog(log, std::move(promise));
     };

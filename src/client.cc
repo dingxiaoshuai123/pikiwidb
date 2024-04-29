@@ -395,7 +395,6 @@ int PClient::handlePacket(const char* start, int bytes) {
 void PClient::executeCommand() {
   //  auto [cmdPtr, ret] = g_pikiwidb->GetCmdTableManager().GetCommand(CmdName(), this);
 
-<<<<<<< HEAD
   //  if (!cmdPtr) {
   //    if (ret == CmdRes::kInvalidParameter) {
   //      SetRes(CmdRes::kInvalidParameter);
@@ -412,30 +411,6 @@ void PClient::executeCommand() {
   //
   //  // execute a specific command
   //  cmdPtr->Execute(this);
-=======
-  if (!cmdPtr) {
-    if (ret == CmdRes::kInvalidParameter) {
-      SetRes(CmdRes::kInvalidParameter);
-    } else {
-      SetRes(CmdRes::kSyntaxErr, "unknown command '" + CmdName() + "'");
-    }
-    return;
-  }
-
-  if (!cmdPtr->CheckArg(params_.size())) {
-    SetRes(CmdRes::kWrongNum, CmdName());
-    return;
-  }
-
-  // if user send write command to a node which is not leader, he should get the info of leader
-  if (cmdPtr->HasFlag(kCmdFlagsWrite) && PRAFT.IsInitialized() && !PRAFT.IsLeader()) {
-    SetRes(CmdRes::kErrOther, fmt::format("MOVED {}", PRAFT.GetLeaderAddress()));
-    return;
-  }
-
-  // execute a specific command
-  cmdPtr->Execute(this);
->>>>>>> import-braft
 }
 
 PClient* PClient::Current() { return s_current; }

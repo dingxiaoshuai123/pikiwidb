@@ -25,7 +25,7 @@ namespace pikiwidb {
 
 #define RAFT_GROUPID_LEN 32
 
-#define OK "+OK"
+#define OK_STR "+OK"
 #define DATABASES_NUM "databases_num"
 #define ROCKSDB_NUM "rocksdb_num"
 #define ROCKSDB_VERSION "rocksdb_version"
