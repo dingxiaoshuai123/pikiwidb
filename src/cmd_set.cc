@@ -241,7 +241,7 @@ void SRandMemberCmd::DoCmd(PClient* client) {
   std::vector<std::string> vec_ret;
   storage::Status s =
       PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->SRandmember(client->argv_[1], this->num_rand, &vec_ret);
-  if(s.ok()) {
+  if (s.ok()) {
     if (client->argv_.size() == 3) {
       client->AppendStringVector(vec_ret);
     } else if (client->argv_.size() == 2) {  // srand only needs to return one element
@@ -249,7 +249,7 @@ void SRandMemberCmd::DoCmd(PClient* client) {
     }
     return;
   }
-  if(!s.IsNotFound()) {
+  if (!s.IsNotFound()) {
     if (s.IsInvalidArgument()) {
       client->SetRes(CmdRes::kMultiKey);
     } else {
@@ -258,8 +258,6 @@ void SRandMemberCmd::DoCmd(PClient* client) {
     return;
   }
   client->AppendString("");
-  
-  
 }
 
 SPopCmd::SPopCmd(const std::string& name, int16_t arity)

@@ -538,13 +538,10 @@ void ZRevrangebyscoreCmd::DoCmd(PClient* client) {
     return;
   }
   std::vector<storage::ScoreMember> score_members;
-  std::cout <<"min = " << min_score << " max = " << max_score << " offset = " << offset << " count = " << count << std::endl;
-  storage::Status s = PSTORE.GetBackend(client->GetCurrentDB())
-                          ->GetStorage()
-                          ->ZRevrangebyscore(client->Key(), min_score, max_score, left_close, right_close, &score_members);
-  for (auto& sc : score_members) {
-    std::cout << "member = " << sc.member << std::endl;
-  }
+  storage::Status s =
+      PSTORE.GetBackend(client->GetCurrentDB())
+          ->GetStorage()
+          ->ZRevrangebyscore(client->Key(), min_score, max_score, left_close, right_close, &score_members);
   if (!s.ok() && !s.IsNotFound()) {
     if (s.IsInvalidArgument()) {
       client->SetRes(CmdRes::kMultiKey);

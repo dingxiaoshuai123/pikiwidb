@@ -384,7 +384,8 @@ void HIncrbyFloatCmd::DoCmd(PClient* client) {
                           ->HIncrbyfloat(client->Key(), client->argv_[2], client->argv_[3], &newValue);
   if (s.ok() || s.IsNotFound()) {
     client->AppendString(newValue);
-  } else if (s.IsInvalidArgument() && s.ToString().substr(0, std::char_traits<char>::length(ErrTypeMessage)) == ErrTypeMessage) {
+  } else if (s.IsInvalidArgument() &&
+             s.ToString().substr(0, std::char_traits<char>::length(ErrTypeMessage)) == ErrTypeMessage) {
     client->SetRes(CmdRes::kMultiKey);
   } else if (s.IsCorruption() && s.ToString() == "Corruption: value is not a vaild float") {
     client->SetRes(CmdRes::kInvalidFloat);
@@ -439,7 +440,8 @@ void HIncrbyCmd::DoCmd(PClient* client) {
       PSTORE.GetBackend(client->GetCurrentDB())->GetStorage()->HIncrby(client->Key(), client->argv_[2], int_by, &temp);
   if (s.ok() || s.IsNotFound()) {
     client->AppendInteger(temp);
-  } else if (s.IsInvalidArgument() && s.ToString().substr(0, std::char_traits<char>::length(ErrTypeMessage)) == ErrTypeMessage) {
+  } else if (s.IsInvalidArgument() &&
+             s.ToString().substr(0, std::char_traits<char>::length(ErrTypeMessage)) == ErrTypeMessage) {
     client->SetRes(CmdRes::kMultiKey);
   } else if (s.IsCorruption() && s.ToString() == "Corruption: hash value is not an integer") {
     client->SetRes(CmdRes::kInvalidInt);

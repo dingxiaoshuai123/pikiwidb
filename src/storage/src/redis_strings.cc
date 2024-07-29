@@ -311,7 +311,7 @@ Status Redis::Get(const Slice& key, std::string* value) {
     if (IsStale(*value)) {
       value->clear();
       return Status::NotFound("Stale");
-    } else if(!ExpectedMetaValue(DataType::kStrings, *value)){
+    } else if (!ExpectedMetaValue(DataType::kStrings, *value)) {
       return Status::InvalidArgument(fmt::format("WRONGTYPE, key: {}, expect type: {}, get type: {}", key.ToString(),
                                                  DataTypeStrings[static_cast<int>(DataType::kStrings)],
                                                  DataTypeStrings[static_cast<int>(GetMetaValueType(*value))]));
