@@ -82,12 +82,12 @@ func (s *Server) NewClient() *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr:         s.getAddr(),
 		DB:           0,
-		DialTimeout:  10 * time.Second,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		DialTimeout:  10 * time.Minute,
+		ReadTimeout:  10 * time.Minute,
+		WriteTimeout: 10 * time.Minute,
 		MaxRetries:   -1,
 		PoolSize:     30,
-		PoolTimeout:  60 * time.Second,
+		PoolTimeout:  10 * time.Minute,
 	})
 }
 

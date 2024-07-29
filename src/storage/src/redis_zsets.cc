@@ -455,13 +455,11 @@ Status Redis::ZRange(const Slice& key, int32_t start, int32_t stop, std::vector<
     } else {
       ParsedZSetsMetaValue parsed_zsets_meta_value(&meta_value);
       int32_t count = parsed_zsets_meta_value.Count();
-      std::cout << "Count = " << count << std::endl;
       uint64_t version = parsed_zsets_meta_value.Version();
       int32_t start_index = start >= 0 ? start : count + start;
       int32_t stop_index = stop >= 0 ? stop : count + stop;
       start_index = start_index <= 0 ? 0 : start_index;
       stop_index = stop_index >= count ? count - 1 : stop_index;
-      std::cout << "start = " << start_index << "   stop = " << stop_index << std::endl;
 
       if (start_index > stop_index || start_index >= count || stop_index < 0) {
         return s;
@@ -477,8 +475,6 @@ Status Redis::ZRange(const Slice& key, int32_t start, int32_t stop, std::vector<
           ParsedZSetsScoreKey parsed_zsets_score_key(iter->key());
           score_member.score = parsed_zsets_score_key.score();
           score_member.member = parsed_zsets_score_key.member().ToString();
-          std::cout << "score_member.score = " << score_member.score
-                    << "  score_member.member = " << score_member.member << std::endl;
           score_members->push_back(score_member);
         }
       }
