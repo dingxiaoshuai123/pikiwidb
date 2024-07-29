@@ -192,9 +192,11 @@ void SCardCmd::DoCmd(PClient* client) {
     } else {
       client->SetRes(CmdRes::kSyntaxErr, "scard cmd error");
     }
+  if (s.ok() || s.IsNotFound()) {
+    client->AppendInteger(reply_Num);
     return;
   }
-  client->AppendInteger(reply_Num);
+  client->SetRes(CmdRes::kSyntaxErr, "scard cmd error");
 }
 
 SMoveCmd::SMoveCmd(const std::string& name, int16_t arity)

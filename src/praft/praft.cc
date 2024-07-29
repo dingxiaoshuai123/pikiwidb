@@ -9,9 +9,11 @@
 
 #include <cassert>
 
+#include "braft/raft.h"
 #include "braft/snapshot.h"
 #include "braft/util.h"
 #include "brpc/server.h"
+#include "gflags/gflags.h"
 
 #include "pstd/log.h"
 #include "pstd/pstd_string.h"
@@ -24,6 +26,10 @@
 
 #include "praft_service.h"
 #include "psnapshot.h"
+
+namespace braft {
+DECLARE_bool(raft_enable_leader_lease);
+}  // namespace braft
 
 #define ERROR_LOG_AND_STATUS(msg) \
   ({                              \
@@ -165,6 +171,9 @@ butil::Status PRaft::Init(std::string& group_id, bool initial_conf_is_null) {
     return ERROR_LOG_AND_STATUS("Failed to init raft node");
   }
 
+  // enable leader lease
+  braft::FLAGS_raft_enable_leader_lease = true;
+
   return {0, "OK"};
 }
 
@@ -173,7 +182,23 @@ bool PRaft::IsLeader() const {
     ERROR("Node is not initialized");
     return false;
   }
-  return node_->is_leader();
+
+  braft::LeaderLeaseStatus lease_status;
+  GetLeaderLeaseStatus(&lease_status);
+  auto term = leader_term_.load(butil::memory_order_acquire);
+
+  INFO("term : {}, lease_status : {}", term, lease_status.term);
+
+  return term > 0 && term == lease_status.term;
+}
+
+void PRaft::GetLeaderLeaseStatus(braft::LeaderLeaseStatus* status) const {
+  if (!node_) {
+    ERROR("Node is not initialized");
+    return;
+  }
+
+  node_->get_leader_lease_status(status);
 }
 
 std::string PRaft::GetLeaderID() const {
@@ -190,6 +215,11 @@ std::string PRaft::GetLeaderAddress() const {
     return "Failed to get leader id";
   }
   auto id = node_->leader_id();
+  // The cluster does not have a leader.
+  if (id.is_empty()) {
+    return std::string();
+  }
+
   id.addr.port -= g_config.raft_port_offset;
   auto addr = butil::endpoint2str(id.addr);
   return addr.c_str();
@@ -688,15 +718,25 @@ int PRaft::on_snapshot_load(braft::SnapshotReader* reader) {
 }
 
 void PRaft::on_leader_start(int64_t term) {
-  WARN("Node {} start to be leader, term={}", node_->node_id().to_string(), term);
+  leader_term_.store(term, butil::memory_order_release);
+  LOG(INFO) << "Node becomes leader, term : " << term;
 }
 
-void PRaft::on_leader_stop(const butil::Status& status) {}
+void PRaft::on_leader_stop(const butil::Status& status) {
+  leader_term_.store(-1, butil::memory_order_release);
+  LOG(INFO) << "Node stepped down : " << status;
+}
 
-void PRaft::on_shutdown() {}
-void PRaft::on_error(const ::braft::Error& e) {}
-void PRaft::on_configuration_committed(const ::braft::Configuration& conf) {}
-void PRaft::on_stop_following(const ::braft::LeaderChangeContext& ctx) {}
-void PRaft::on_start_following(const ::braft::LeaderChangeContext& ctx) {}
+void PRaft::on_shutdown() { LOG(INFO) << "This node is down"; }
+
+void PRaft::on_error(const ::braft::Error& e) { LOG(ERROR) << "Met raft error " << e; }
+
+void PRaft::on_configuration_committed(const ::braft::Configuration& conf) {
+  LOG(INFO) << "Configuration of this group is " << conf;
+}
+
+void PRaft::on_stop_following(const ::braft::LeaderChangeContext& ctx) { LOG(INFO) << "Node stops following " << ctx; }
+
+void PRaft::on_start_following(const ::braft::LeaderChangeContext& ctx) { LOG(INFO) << "Node start following " << ctx; }
 
 }  // namespace pikiwidb
