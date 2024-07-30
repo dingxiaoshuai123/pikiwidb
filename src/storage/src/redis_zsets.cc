@@ -26,7 +26,7 @@ Status Redis::ScanZsetsKeyNum(KeyInfo* key_info) {
   uint64_t keys = 0;
   uint64_t expires = 0;
   uint64_t ttl_sum = 0;
-  uint64_t invaild_keys = 0;
+  uint64_t invalid_keys = 0;
 
   rocksdb::ReadOptions iterator_options;
   const rocksdb::Snapshot* snapshot;
@@ -44,7 +44,7 @@ Status Redis::ScanZsetsKeyNum(KeyInfo* key_info) {
     }
     ParsedZSetsMetaValue parsed_zsets_meta_value(iter->value());
     if (parsed_zsets_meta_value.IsStale() || parsed_zsets_meta_value.Count() == 0) {
-      invaild_keys++;
+      invalid_keys++;
     } else {
       keys++;
       if (!parsed_zsets_meta_value.IsPermanentSurvival()) {
@@ -58,7 +58,7 @@ Status Redis::ScanZsetsKeyNum(KeyInfo* key_info) {
   key_info->keys = keys;
   key_info->expires = expires;
   key_info->avg_ttl = (expires != 0) ? ttl_sum / expires : 0;
-  key_info->invaild_keys = invaild_keys;
+  key_info->invalid_keys = invalid_keys;
   return Status::OK();
 }
 
@@ -192,13 +192,13 @@ Status Redis::ZAdd(const Slice& key, const std::vector<ScoreMember>& score_membe
     }
   }
   if (s.ok()) {
-    bool vaild = true;
+    bool valid = true;
     ParsedZSetsMetaValue parsed_zsets_meta_value(&meta_value);
     if (parsed_zsets_meta_value.IsStale() || parsed_zsets_meta_value.Count() == 0) {
-      vaild = false;
+      valid = false;
       version = parsed_zsets_meta_value.InitialMetaValue();
     } else {
-      vaild = true;
+      valid = true;
       version = parsed_zsets_meta_value.Version();
     }
 
@@ -207,7 +207,7 @@ Status Redis::ZAdd(const Slice& key, const std::vector<ScoreMember>& score_membe
     for (const auto& sm : filtered_score_members) {
       bool not_found = true;
       ZSetsMemberKey zsets_member_key(key, version, sm.member);
-      if (vaild) {
+      if (valid) {
         s = db_->Get(default_read_options_, handles_[kZsetsDataCF], zsets_member_key.Encode(), &data_value);
         if (s.ok()) {
           ParsedBaseDataValue parsed_value(&data_value);

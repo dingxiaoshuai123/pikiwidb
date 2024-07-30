@@ -21,7 +21,7 @@ Status Redis::ScanStringsKeyNum(KeyInfo* key_info) {
   uint64_t keys = 0;
   uint64_t expires = 0;
   uint64_t ttl_sum = 0;
-  uint64_t invaild_keys = 0;
+  uint64_t invalid_keys = 0;
 
   rocksdb::ReadOptions iterator_options;
   const rocksdb::Snapshot* snapshot;
@@ -41,7 +41,7 @@ Status Redis::ScanStringsKeyNum(KeyInfo* key_info) {
     }
     ParsedStringsValue parsed_strings_value(iter->value());
     if (parsed_strings_value.IsStale()) {
-      invaild_keys++;
+      invalid_keys++;
     } else {
       keys++;
       if (!parsed_strings_value.IsPermanentSurvival()) {
@@ -55,7 +55,7 @@ Status Redis::ScanStringsKeyNum(KeyInfo* key_info) {
   key_info->keys = keys;
   key_info->expires = expires;
   key_info->avg_ttl = (expires != 0) ? ttl_sum / expires : 0;
-  key_info->invaild_keys = invaild_keys;
+  key_info->invalid_keys = invalid_keys;
   return Status::OK();
 }
 
@@ -553,7 +553,7 @@ Status Redis::Incrbyfloat(const Slice& key, const Slice& value, std::string* ret
   std::string new_value;
   long double long_double_by;
   if (StrToLongDouble(value.data(), value.size(), &long_double_by) == -1) {
-    return Status::Corruption("Value is not a vaild float");
+    return Status::Corruption("Value is not a valid float");
   }
 
   BaseKey base_key(key);
@@ -576,7 +576,7 @@ Status Redis::Incrbyfloat(const Slice& key, const Slice& value, std::string* ret
       long double total;
       long double old_number;
       if (StrToLongDouble(old_user_value.data(), old_user_value.size(), &old_number) == -1) {
-        return Status::Corruption("Value is not a vaild float");
+        return Status::Corruption("Value is not a valid float");
       }
       total = old_number + long_double_by;
       if (LongDoubleToStr(total, &new_value) == -1) {

@@ -20,7 +20,7 @@ Status Redis::ScanListsKeyNum(KeyInfo* key_info) {
   uint64_t keys = 0;
   uint64_t expires = 0;
   uint64_t ttl_sum = 0;
-  uint64_t invaild_keys = 0;
+  uint64_t invalid_keys = 0;
 
   rocksdb::ReadOptions iterator_options;
   const rocksdb::Snapshot* snapshot;
@@ -38,7 +38,7 @@ Status Redis::ScanListsKeyNum(KeyInfo* key_info) {
     }
     ParsedListsMetaValue parsed_lists_meta_value(iter->value());
     if (parsed_lists_meta_value.IsStale() || parsed_lists_meta_value.Count() == 0) {
-      invaild_keys++;
+      invalid_keys++;
     } else {
       keys++;
       if (!parsed_lists_meta_value.IsPermanentSurvival()) {
@@ -52,7 +52,7 @@ Status Redis::ScanListsKeyNum(KeyInfo* key_info) {
   key_info->keys = keys;
   key_info->expires = expires;
   key_info->avg_ttl = (expires != 0) ? ttl_sum / expires : 0;
-  key_info->invaild_keys = invaild_keys;
+  key_info->invalid_keys = invalid_keys;
   return Status::OK();
 }
 

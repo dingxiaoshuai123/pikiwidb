@@ -523,7 +523,7 @@ void IncrbyFloatCmd::DoCmd(PClient* client) {
   if (s.ok()) {
     client->AppendStringLen(ret.size());
     client->AppendContent(ret);
-  } else if (s.IsCorruption() && s.ToString() == "Corruption: Value is not a vaild float") {
+  } else if (s.IsCorruption() && s.ToString() == "Corruption: Value is not a valid float") {
     client->SetRes(CmdRes::kInvalidFloat);
   } else if (s.IsInvalidArgument()) {
     client->SetRes(CmdRes::KIncrByOverFlow);

@@ -387,7 +387,7 @@ void HIncrbyFloatCmd::DoCmd(PClient* client) {
   } else if (s.IsInvalidArgument() &&
              s.ToString().substr(0, std::char_traits<char>::length(ErrTypeMessage)) == ErrTypeMessage) {
     client->SetRes(CmdRes::kMultiKey);
-  } else if (s.IsCorruption() && s.ToString() == "Corruption: value is not a vaild float") {
+  } else if (s.IsCorruption() && s.ToString() == "Corruption: value is not a valid float") {
     client->SetRes(CmdRes::kInvalidFloat);
   } else if (s.IsInvalidArgument()) {
     client->SetRes(CmdRes::kOverFlow);
