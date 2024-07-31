@@ -279,7 +279,8 @@ Status Redis::HIncrby(const Slice& key, const Slice& field, int64_t value, int64
       batch->Put(kMetaCF, base_meta_key.Encode(), meta_value);
       HashesDataKey hashes_data_key(key, version, field);
       Int64ToStr(value_buf, 32, value);
-      batch->Put(kHashesDataCF, hashes_data_key.Encode(), value_buf);
+      BaseDataValue internal_value(value_buf);
+      batch->Put(kHashesDataCF, hashes_data_key.Encode(), internal_value.Encode());
       *ret = value;
     } else {
       version = parsed_hashes_meta_value.Version();
